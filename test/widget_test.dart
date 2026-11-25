@@ -8,6 +8,7 @@ import 'package:kernel/core/api_client.dart';
 import 'package:kernel/core/catalog.dart';
 import 'package:kernel/core/models.dart';
 import 'package:kernel/main.dart';
+import 'package:kernel/widgets/fx.dart';
 import 'package:kernel/widgets/markdown_view.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -26,20 +27,23 @@ http.Response _json(Object body, [int status = 200]) =>
     http.Response(jsonEncode(body), status, headers: {'content-type': 'application/json'});
 
 Json _user({List<String> topics = const [], List<String> readIds = const []}) => {
-      'id': 'u1',
-      'email': 'reader@example.com',
-      'name': 'Reader',
-      'role': 'user',
-      'topics': topics,
-      'likedCardIds': <String>[],
-      'completedLessonIds': <String>[],
-      'progress': {'date': localDate(), 'readIds': readIds},
-      'streak': 0,
-      'lastGoalDate': '',
-      'dailyGoal': 5,
-    };
+  'id': 'u1',
+  'email': 'reader@example.com',
+  'name': 'Reader',
+  'role': 'user',
+  'topics': topics,
+  'likedCardIds': <String>[],
+  'completedLessonIds': <String>[],
+  'progress': {'date': localDate(), 'readIds': readIds},
+  'streak': 0,
+  'lastGoalDate': '',
+  'dailyGoal': 5,
+};
 
 void main() {
+  // Looping idle animations would keep pumpAndSettle from ever settling.
+  Motion.ambient = false;
+
   group('ApiClient', () {
     test('renews an expired access token once and retries', () async {
       final calls = <String>[];
@@ -62,9 +66,11 @@ void main() {
 
     test('surfaces server error messages and signals a lost session', () async {
       var lost = false;
-      final client = MockClient((req) async => req.url.path == '/api/auth/refresh'
-          ? _json({'error': 'Session expired'}, 401)
-          : _json({'error': 'Session expired'}, 401));
+      final client = MockClient(
+        (req) async => req.url.path == '/api/auth/refresh'
+            ? _json({'error': 'Session expired'}, 401)
+            : _json({'error': 'Session expired'}, 401),
+      );
       final store = MemoryTokenStore();
       final api = ApiClient(baseUrl: 'http://x/api', client: client, store: store)..onSessionLost = () => lost = true;
       await api.setSession({'accessToken': 'a', 'refreshToken': 'r'});
@@ -94,9 +100,15 @@ void main() {
   });
 
   testWidgets('MarkdownView renders headings, emphasis and lists', (tester) async {
-    await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: SingleChildScrollView(child: MarkdownView('## Heading\n\nSome **bold** text.\n\n- First\n- Second\n\n1. One\n2. Two'))),
-    ));
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: MarkdownView('## Heading\n\nSome **bold** text.\n\n- First\n- Second\n\n1. One\n2. Two'),
+          ),
+        ),
+      ),
+    );
     expect(find.text('Heading'), findsOneWidget);
     expect(find.textContaining('bold', findRichText: true), findsOneWidget);
     expect(find.textContaining('Second', findRichText: true), findsOneWidget);
@@ -120,13 +132,26 @@ void main() {
           user = _user(topics: List<String>.from(body['topics'] as List));
           return _json({'user': user});
         case 'GET /stashes':
-          return _json({'stashes': [{'id': 's1', 'name': 'Saved', 'icon': 'bookmark', 'items': []}]});
+          return _json({
+            'stashes': [
+              {'id': 's1', 'name': 'Saved', 'icon': 'bookmark', 'items': []},
+            ],
+          });
         case 'GET /feed':
           return _json({
             'cards': [
-              {'id': 'c1', 'type': 'idea', 'title': 'Systems beat goals', 'body': 'Focus on the process.',
-               'lessonId': 'l1', 'lessonTitle': 'Atomic Habits', 'topic': 'habits', 'source': 'Atomic Habits',
-               'author': 'James Clear', 'readMinutes': 3},
+              {
+                'id': 'c1',
+                'type': 'idea',
+                'title': 'Systems beat goals',
+                'body': 'Focus on the process.',
+                'lessonId': 'l1',
+                'lessonTitle': 'Atomic Habits',
+                'topic': 'habits',
+                'source': 'Atomic Habits',
+                'author': 'James Clear',
+                'readMinutes': 3,
+              },
             ],
             'hasMore': false,
           });
@@ -136,18 +161,33 @@ void main() {
         case 'GET /lessons/l1':
           return _json({
             'lesson': {
-              'id': 'l1', 'slug': 'atomic', 'title': 'Atomic Habits: Systems Over Goals', 'summary': 'Small changes compound.',
-              'topic': 'habits', 'source': 'Atomic Habits', 'author': 'James Clear', 'readMinutes': 3, 'visibility': 'public',
-              'canEdit': false, 'completed': false, 'body': '## Why goals are not enough\n\nBecause systems matter.',
+              'id': 'l1',
+              'slug': 'atomic',
+              'title': 'Atomic Habits: Systems Over Goals',
+              'summary': 'Small changes compound.',
+              'topic': 'habits',
+              'source': 'Atomic Habits',
+              'author': 'James Clear',
+              'readMinutes': 3,
+              'visibility': 'public',
+              'canEdit': false,
+              'completed': false,
+              'body': '## Why goals are not enough\n\nBecause systems matter.',
               'takeaways': ['Systems beat goals'],
-              'cards': [{'id': 'c1', 'type': 'idea', 'title': 'Systems beat goals', 'body': 'Focus on the process.'}],
+              'cards': [
+                {'id': 'c1', 'type': 'idea', 'title': 'Systems beat goals', 'body': 'Focus on the process.'},
+              ],
             },
           });
       }
       return _json({'error': 'Not found: ${req.method} $path'}, 404);
     });
 
-    await tester.pumpWidget(KernelApp(api: ApiClient(baseUrl: 'http://x/api', client: client, store: MemoryTokenStore())));
+    await tester.pumpWidget(
+      KernelApp(
+        api: ApiClient(baseUrl: 'http://x/api', client: client, store: MemoryTokenStore()),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // Signed out → sign-in form, with a wrong password first.
@@ -186,7 +226,9 @@ void main() {
   test('UI source uses icons, not emoji', () {
     final emoji = RegExp(r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}]', unicode: true);
     final offenders = <String>[];
-    for (final f in Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'))) {
+    for (final f in Directory(
+      'lib',
+    ).listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'))) {
       final lines = f.readAsLinesSync();
       for (var i = 0; i < lines.length; i++) {
         if (emoji.hasMatch(lines[i])) offenders.add('${f.path}:${i + 1}');

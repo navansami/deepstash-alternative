@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -6,7 +8,9 @@ import '../core/catalog.dart';
 import '../core/models.dart';
 import '../state/session.dart';
 import '../widgets/common.dart';
+import '../widgets/fx.dart';
 import '../widgets/idea_card.dart';
+import '../widgets/mascot.dart';
 import 'topic_picker.dart';
 
 /// Today's key ideas: swipe vertically through full-height cards.
@@ -27,11 +31,14 @@ class _FeedScreenState extends State<FeedScreen> {
   Object? _error;
   String _date = localDate();
   List<String> _topics = const [];
+  late bool _goalWasMet;
 
   @override
   void initState() {
     super.initState();
-    _topics = context.read<Session>().me.topics;
+    final me = context.read<Session>().me;
+    _topics = me.topics;
+    _goalWasMet = me.goalMetOn(localDate());
     _load();
   }
 
@@ -95,20 +102,47 @@ class _FeedScreenState extends State<FeedScreen> {
     final goalMet = user.goalMetOn(today);
     final streak = user.currentStreak(today, yesterdayDate());
 
+    // Celebrate the moment the daily goal is reached.
+    if (goalMet && !_goalWasMet) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        celebrate(
+          context,
+          title: 'Daily goal reached!',
+          message: streak > 1
+              ? "That's $streak days in a row. Your brain thanks you."
+              : 'You read ${user.dailyGoal} ideas today. Come back tomorrow to start a streak.',
+        );
+      });
+    }
+    _goalWasMet = goalMet;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Today', style: TextStyle(fontWeight: FontWeight.w800)),
+        titleSpacing: 8,
+        title: Row(
+          children: [
+            Mascot(size: 44, mood: goalMet ? MascotMood.cheer : MascotMood.happy),
+            const SizedBox(width: 6),
+            const Text('Today', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: -0.5)),
+          ],
+        ),
         actions: [
           Tooltip(
             message: goalMet ? 'Daily goal met' : 'Read ${user.dailyGoal} ideas a day to build your streak',
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(children: [
-                Icon(Icons.local_fire_department_rounded,
-                    color: goalMet ? const Color(0xFFF76B15) : scheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                const SizedBox(width: 2),
-                Text('$streak', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-              ]),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(8, 4, 12, 4),
+              decoration: BoxDecoration(
+                color: goalMet ? const Color(0xFFFF8A3D).withValues(alpha: 0.14) : scheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Row(
+                children: [
+                  StreakFlame(lit: goalMet, size: 24),
+                  const SizedBox(width: 2),
+                  Text('$streak', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                ],
+              ),
             ),
           ),
           IconButton(
@@ -121,21 +155,22 @@ class _FeedScreenState extends State<FeedScreen> {
           preferredSize: const Size.fromHeight(28),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: Row(children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: LinearProgressIndicator(value: (read / user.dailyGoal).clamp(0.0, 1.0), minHeight: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GradientProgressBar(value: read / user.dailyGoal, colors: flameColors.reversed.toList()),
                 ),
-              ),
-              const SizedBox(width: 12),
-              if (goalMet) ...[
-                Icon(Icons.verified_rounded, size: 16, color: scheme.primary),
-                const SizedBox(width: 4),
+                const SizedBox(width: 12),
+                if (goalMet) ...[
+                  Icon(Icons.verified_rounded, size: 16, color: scheme.primary),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  goalMet ? 'Goal met' : '$read/${user.dailyGoal} today',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+                ),
               ],
-              Text(goalMet ? 'Goal met' : '$read/${user.dailyGoal} today',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
-            ]),
+            ),
           ),
         ),
       ),
@@ -149,6 +184,7 @@ class _FeedScreenState extends State<FeedScreen> {
     if (_cards.isEmpty) {
       return const MessageView(
         icon: Icons.inbox_outlined,
+        mood: MascotMood.sleepy,
         title: 'Nothing here yet',
         message: 'There are no lessons in your topics yet. Try adding more topics.',
       );
@@ -167,35 +203,64 @@ class _FeedScreenState extends State<FeedScreen> {
         itemBuilder: (context, i) {
           if (i == _cards.length) return _end();
           final card = _cards[i];
-          return Center(
+          final page = Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 680),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: Column(children: [
-                  Expanded(
-                    child: IdeaCardView(
-                      item: card,
-                      large: true,
-                      read: user.progressDate == today && user.readIds.contains(card.id),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: IdeaCardView(
+                        item: card,
+                        large: true,
+                        read: user.progressDate == today && user.readIds.contains(card.id),
+                      ),
                     ),
-                  ),
-                  if (i == 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(Icons.swipe_up_rounded, size: 18, color: scheme.onSurfaceVariant),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text('Swipe up for the next idea',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+                    if (i == 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AmbientBuilder(
+                              period: const Duration(milliseconds: 1300),
+                              builder: (context, t, child) => Transform.translate(
+                                offset: Offset(0, -5 * math.sin(t * 2 * math.pi).abs()),
+                                child: child,
+                              ),
+                              child: Icon(Icons.swipe_up_rounded, size: 20, color: scheme.primary),
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                'Swipe up for the next idea',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
+                              ),
+                            ),
+                          ],
                         ),
-                      ]),
-                    ),
-                ]),
+                      ),
+                  ],
+                ),
               ),
             ),
+          );
+          // Neighbouring cards shrink and fade a little as they slide away.
+          return AnimatedBuilder(
+            animation: _pages,
+            child: page,
+            builder: (context, child) {
+              var d = 0.0;
+              if (_pages.hasClients && _pages.position.haveDimensions) {
+                d = ((_pages.page ?? 0) - i).abs().clamp(0.0, 1.0);
+              }
+              return Opacity(
+                opacity: 1 - d * 0.5,
+                child: Transform.scale(scale: 1 - d * 0.1, child: child),
+              );
+            },
           );
         },
       ),
@@ -206,6 +271,7 @@ class _FeedScreenState extends State<FeedScreen> {
     if (_loadingMore) return const LoadingView();
     return MessageView(
       icon: Icons.task_alt_rounded,
+      mood: MascotMood.cheer,
       title: "You're all caught up",
       message: _hasMore
           ? "That's today's feed. Want a few more?"

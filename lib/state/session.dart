@@ -46,7 +46,9 @@ class Session extends ChangeNotifier {
     if (saved != null) {
       try {
         await api.postPublic('/auth/logout', {'refreshToken': saved});
-      } catch (_) {/* best effort */}
+      } catch (_) {
+        /* best effort */
+      }
     }
     await api.clearSession();
     _setUser(null);

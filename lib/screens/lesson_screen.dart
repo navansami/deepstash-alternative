@@ -7,9 +7,12 @@ import '../core/models.dart';
 import '../state/session.dart';
 import '../state/stashes.dart';
 import '../widgets/common.dart';
+import '../widgets/fx.dart';
 import '../widgets/idea_card.dart';
 import '../widgets/markdown_view.dart';
+import '../widgets/mascot.dart';
 import '../widgets/save_sheet.dart';
+import '../widgets/topic_art.dart';
 import 'lesson_editor_screen.dart';
 
 Future<void> openLesson(BuildContext context, String idOrSlug) =>
@@ -81,10 +84,13 @@ class _LessonScreenState extends State<LessonScreen> with BusyState {
           IconButton(
             tooltip: 'Save lesson',
             onPressed: () => showSaveSheet(context, StashKind.lesson, lesson.id),
-            icon: Icon(saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                color: saved ? scheme.primary : null),
+            icon: Icon(
+              saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+              color: saved ? scheme.primary : null,
+            ),
           ),
-          if (lesson.canEdit) IconButton(tooltip: 'Edit lesson', onPressed: _edit, icon: const Icon(Icons.edit_outlined)),
+          if (lesson.canEdit)
+            IconButton(tooltip: 'Edit lesson', onPressed: _edit, icon: const Icon(Icons.edit_outlined)),
         ],
       ),
       body: Center(
@@ -93,37 +99,87 @@ class _LessonScreenState extends State<LessonScreen> with BusyState {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
             children: [
-              Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                Chip(
-                  avatar: Icon(topic.icon, size: 16, color: scheme.onPrimaryContainer),
-                  label: Text(topic.name),
-                  backgroundColor: scheme.primaryContainer,
-                  labelStyle: TextStyle(color: scheme.onPrimaryContainer, fontWeight: FontWeight.w600),
-                  side: BorderSide.none,
-                  visualDensity: VisualDensity.compact,
+              FadeSlideIn(
+                child: TopicBanner(
+                  topic: topic,
+                  height: 156,
+                  borderRadius: BorderRadius.circular(26),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: 18,
+                        top: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.24),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: TopicLabel(topic.id, color: Colors.white),
+                        ),
+                      ),
+                      Positioned(
+                        left: 20,
+                        bottom: 18,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.schedule_rounded, size: 18, color: Colors.white),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${lesson.readMinutes} min read',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                            ),
+                            if (!lesson.isPublic) ...[
+                              const SizedBox(width: 14),
+                              const Icon(Icons.lock_outline_rounded, size: 16, color: Colors.white),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'Private',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        right: 10,
+                        bottom: 0,
+                        child: Mascot(size: 128, mood: completed ? MascotMood.cheer : MascotMood.reading),
+                      ),
+                    ],
+                  ),
                 ),
-                _Meta(icon: Icons.schedule_rounded, text: '${lesson.readMinutes} min read'),
-                if (!lesson.isPublic) const _Meta(icon: Icons.lock_outline_rounded, text: 'Private'),
-              ]),
-              const SizedBox(height: 14),
-              Text(lesson.title,
-                  style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, height: 1.15, letterSpacing: -0.6)),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                lesson.title,
+                style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, height: 1.15, letterSpacing: -0.6),
+              ),
               const SizedBox(height: 10),
               Text(lesson.summary, style: TextStyle(fontSize: 18, height: 1.45, color: scheme.onSurfaceVariant)),
               if (lesson.source.isNotEmpty || lesson.author.isNotEmpty) ...[
                 const SizedBox(height: 14),
-                Row(children: [
-                  Icon(Icons.menu_book_outlined, size: 18, color: scheme.onSurfaceVariant),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text.rich(TextSpan(children: [
-                      if (lesson.source.isNotEmpty)
-                        TextSpan(text: lesson.source, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      if (lesson.source.isNotEmpty && lesson.author.isNotEmpty) const TextSpan(text: '  by  '),
-                      if (lesson.author.isNotEmpty) TextSpan(text: lesson.author),
-                    ])),
-                  ),
-                ]),
+                Row(
+                  children: [
+                    Icon(Icons.menu_book_outlined, size: 18, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            if (lesson.source.isNotEmpty)
+                              TextSpan(
+                                text: lesson.source,
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            if (lesson.source.isNotEmpty && lesson.author.isNotEmpty) const TextSpan(text: '  by  '),
+                            if (lesson.author.isNotEmpty) TextSpan(text: lesson.author),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
               const Padding(padding: EdgeInsets.symmetric(vertical: 18), child: Divider()),
               MarkdownView(lesson.body),
@@ -131,32 +187,51 @@ class _LessonScreenState extends State<LessonScreen> with BusyState {
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(color: scheme.secondaryContainer, borderRadius: BorderRadius.circular(18)),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Icon(Icons.key_rounded, color: scheme.onSecondaryContainer),
-                      const SizedBox(width: 8),
-                      Text('Key takeaways',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 17, color: scheme.onSecondaryContainer)),
-                    ]),
-                    const SizedBox(height: 12),
-                    for (final t in lesson.takeaways)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Icon(Icons.check_rounded, size: 18, color: scheme.onSecondaryContainer),
-                          ),
+                  decoration: BoxDecoration(
+                    color: scheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border(left: BorderSide(color: topic.color, width: 6)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.key_rounded, color: scheme.onSecondaryContainer),
                           const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(t,
-                                style: TextStyle(fontSize: 15.5, height: 1.45, color: scheme.onSecondaryContainer)),
+                          Text(
+                            'Key takeaways',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 17,
+                              color: scheme.onSecondaryContainer,
+                            ),
                           ),
-                        ]),
+                        ],
                       ),
-                  ]),
+                      const SizedBox(height: 12),
+                      for (final t in lesson.takeaways)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Icon(Icons.check_rounded, size: 18, color: scheme.onSecondaryContainer),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  t,
+                                  style: TextStyle(fontSize: 15.5, height: 1.45, color: scheme.onSecondaryContainer),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ],
               const SizedBox(height: 28),
@@ -192,8 +267,17 @@ class _LessonScreenState extends State<LessonScreen> with BusyState {
                       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
                       onPressed: busy
                           ? null
-                          : () => run(() => context.read<Session>().recordProgress(StashKind.lesson, lesson.id),
-                              success: 'Nice work. Lesson completed.'),
+                          : () => run(() async {
+                              await context.read<Session>().recordProgress(StashKind.lesson, lesson.id);
+                              if (context.mounted) {
+                                celebrate(
+                                  context,
+                                  title: 'Lesson complete!',
+                                  message: 'You finished "${lesson.title}". That idea is yours now.',
+                                  action: 'Nice',
+                                );
+                              }
+                            }),
                       icon: const Icon(Icons.task_alt_rounded),
                       label: const Text('Mark as complete', style: TextStyle(fontWeight: FontWeight.w700)),
                     ),
@@ -202,21 +286,5 @@ class _LessonScreenState extends State<LessonScreen> with BusyState {
         ),
       ),
     );
-  }
-}
-
-class _Meta extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _Meta({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    final c = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 16, color: c),
-      const SizedBox(width: 4),
-      Text(text, style: TextStyle(color: c, fontSize: 13)),
-    ]);
   }
 }

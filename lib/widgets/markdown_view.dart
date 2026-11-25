@@ -32,7 +32,12 @@ class _Renderer {
       case 'h2':
       case 'h3':
       case 'h4':
-        final size = switch (node.tag) { 'h1' => 26.0, 'h2' => 21.0, 'h3' => 18.0, _ => 16.0 };
+        final size = switch (node.tag) {
+          'h1' => 26.0,
+          'h2' => 21.0,
+          'h3' => 18.0,
+          _ => 16.0,
+        };
         return [
           Padding(
             padding: const EdgeInsets.only(top: 22, bottom: 8),
@@ -63,18 +68,21 @@ class _Renderer {
                 for (final li in (node.children ?? const []).whereType<md.Element>())
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      SizedBox(
-                        width: 28,
-                        child: ordered
-                            ? Text('${start + i++}.', style: _body.copyWith(fontWeight: FontWeight.w700))
-                            : Padding(
-                                padding: const EdgeInsets.only(top: 10, left: 6),
-                                child: Icon(Icons.circle, size: 7, color: scheme.primary),
-                              ),
-                      ),
-                      Expanded(child: _listItem(li)),
-                    ]),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 28,
+                          child: ordered
+                              ? Text('${start + i++}.', style: _body.copyWith(fontWeight: FontWeight.w700))
+                              : Padding(
+                                  padding: const EdgeInsets.only(top: 10, left: 6),
+                                  child: Icon(Icons.circle, size: 7, color: scheme.primary),
+                                ),
+                        ),
+                        Expanded(child: _listItem(li)),
+                      ],
+                    ),
                   ),
               ],
             ),
@@ -121,8 +129,10 @@ class _Renderer {
 
   bool _isBlock(String tag) => const {'p', 'ul', 'ol', 'blockquote', 'pre', 'h1', 'h2', 'h3', 'h4', 'hr'}.contains(tag);
 
-  Widget _para(String text) =>
-      Padding(padding: const EdgeInsets.only(bottom: 14), child: Text(text, style: _body));
+  Widget _para(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: Text(text, style: _body),
+  );
 
   List<InlineSpan> inline(List<md.Node> nodes, [TextStyle style = const TextStyle()]) {
     final out = <InlineSpan>[];

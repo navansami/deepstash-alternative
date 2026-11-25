@@ -38,8 +38,6 @@ class TokenStore {
   Future<void> clear() => _storage.delete(key: _key);
 }
 
-
-
 class ApiClient {
   final String baseUrl;
   final http.Client _http;
@@ -53,9 +51,9 @@ class ApiClient {
   VoidCallback? onSessionLost;
 
   ApiClient({String? baseUrl, http.Client? client, TokenStore? store})
-      : baseUrl = baseUrl ?? resolveApiBase(),
-        _http = client ?? http.Client(),
-        _store = store ?? TokenStore();
+    : baseUrl = baseUrl ?? resolveApiBase(),
+      _http = client ?? http.Client(),
+      _store = store ?? TokenStore();
 
   bool get hasSession => _refreshToken != null;
   String? get refreshToken => _refreshToken;
@@ -96,8 +94,14 @@ class ApiClient {
   /// Unauthenticated call (login, register, logout).
   Future<Json> postPublic(String path, Object body) => _send('POST', path, body: body, auth: false);
 
-  Future<Json> _send(String method, String path,
-      {Object? body, Map<String, String>? query, bool auth = true, bool retry = true}) async {
+  Future<Json> _send(
+    String method,
+    String path, {
+    Object? body,
+    Map<String, String>? query,
+    bool auth = true,
+    bool retry = true,
+  }) async {
     final uri = Uri.parse('$baseUrl$path').replace(queryParameters: query);
     final request = http.Request(method, uri)..headers['Content-Type'] = 'application/json';
     if (auth && _accessToken != null) request.headers['Authorization'] = 'Bearer $_accessToken';

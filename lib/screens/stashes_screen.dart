@@ -45,8 +45,8 @@ class StashesScreen extends StatelessWidget {
                   title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text('${s.items.length} saved'),
                   trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (_) => StashDetailScreen(stashId: s.id))),
+                  onTap: () =>
+                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => StashDetailScreen(stashId: s.id))),
                 ),
               ),
           ],
@@ -55,7 +55,9 @@ class StashesScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Stashes', style: TextStyle(fontWeight: FontWeight.w800))),
+      appBar: AppBar(
+        title: const Text('Stashes', style: TextStyle(fontWeight: FontWeight.w800)),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'new-stash',
         icon: const Icon(Icons.create_new_folder_outlined),
@@ -70,7 +72,9 @@ class StashesScreen extends StatelessWidget {
           }
         },
       ),
-      body: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 760), child: body)),
+      body: Center(
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 760), child: body),
+      ),
     );
   }
 }
@@ -119,16 +123,18 @@ class _StashDetailScreenState extends State<StashDetailScreen> {
     try {
       await context.read<Stashes>().toggle(stash, kind, refId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Removed from ${stash.name}'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () async {
-            await context.read<Stashes>().toggle(stash, kind, refId);
-            _load();
-          },
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Removed from ${stash.name}'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () async {
+              await context.read<Stashes>().toggle(stash, kind, refId);
+              _load();
+            },
+          ),
         ),
-      ));
+      );
     } catch (err) {
       if (mounted) showSnack(context, err.toString());
       _load();
@@ -148,11 +154,13 @@ class _StashDetailScreenState extends State<StashDetailScreen> {
         }
       }
     } else if (action == 'delete') {
-      final ok = await confirm(context,
-          title: 'Delete "${stash.name}"?',
-          message: 'The lessons and ideas stay in the library. Only this collection is removed.',
-          confirmLabel: 'Delete',
-          destructive: true);
+      final ok = await confirm(
+        context,
+        title: 'Delete "${stash.name}"?',
+        message: 'The lessons and ideas stay in the library. Only this collection is removed.',
+        confirmLabel: 'Delete',
+        destructive: true,
+      );
       if (!ok || !mounted) return;
       try {
         await stashes.remove(stash);
@@ -207,26 +215,33 @@ class _StashDetailScreenState extends State<StashDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(children: [
-          Icon(stashIcon(stash.icon)),
-          const SizedBox(width: 10),
-          Flexible(child: Text(stash.name, overflow: TextOverflow.ellipsis)),
-        ]),
+        title: Row(
+          children: [
+            Icon(stashIcon(stash.icon)),
+            const SizedBox(width: 10),
+            Flexible(child: Text(stash.name, overflow: TextOverflow.ellipsis)),
+          ],
+        ),
         actions: [
           PopupMenuButton<String>(
             onSelected: _menu,
             itemBuilder: (_) => [
               const PopupMenuItem(
-                  value: 'edit', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Rename'))),
+                value: 'edit',
+                child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Rename')),
+              ),
               if (stashes.items.length > 1)
                 const PopupMenuItem(
-                    value: 'delete',
-                    child: ListTile(leading: Icon(Icons.delete_outline_rounded), title: Text('Delete stash'))),
+                  value: 'delete',
+                  child: ListTile(leading: Icon(Icons.delete_outline_rounded), title: Text('Delete stash')),
+                ),
             ],
           ),
         ],
       ),
-      body: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 760), child: body)),
+      body: Center(
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 760), child: body),
+      ),
     );
   }
 }

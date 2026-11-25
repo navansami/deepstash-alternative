@@ -7,7 +7,9 @@ import '../core/api_client.dart';
 import '../core/catalog.dart';
 import '../core/models.dart';
 import '../widgets/common.dart';
+import '../widgets/fx.dart';
 import '../widgets/lesson_tile.dart';
+import '../widgets/mascot.dart';
 import 'lesson_editor_screen.dart';
 
 /// Browse and search full lessons. Also used for "My lessons" ([mine] = true).
@@ -48,12 +50,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
       _error = null;
     });
     try {
-      final json = await context.read<ApiClient>().get('/lessons', query: {
-        'topic': ?_topic,
-        if (_query.trim().isNotEmpty) 'q': _query.trim(),
-        if (widget.mine) 'mine': '1',
-        if (more) 'skip': '${_lessons.length}',
-      });
+      final json = await context.read<ApiClient>().get(
+        '/lessons',
+        query: {
+          'topic': ?_topic,
+          if (_query.trim().isNotEmpty) 'q': _query.trim(),
+          if (widget.mine) 'mine': '1',
+          if (more) 'skip': '${_lessons.length}',
+        },
+      );
       if (!mounted || id != _requestId) return; // a newer search superseded this one
       final items = (json['lessons'] as List).map((l) => LessonSummary.fromJson(l as Json));
       setState(() {
@@ -75,14 +80,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Future<void> _write() async {
-    final created = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const LessonEditorScreen()));
+    final created = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute(builder: (_) => const LessonEditorScreen()));
     if (created == true) _load();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.mine ? 'My lessons' : 'Explore', style: const TextStyle(fontWeight: FontWeight.w800))),
+      appBar: AppBar(
+        title: Text(widget.mine ? 'My lessons' : 'Explore', style: const TextStyle(fontWeight: FontWeight.w800)),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: widget.mine ? 'write-mine' : 'write',
         onPressed: _write,
@@ -92,53 +100,61 @@ class _ExploreScreenState extends State<ExploreScreen> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
-          child: Column(children: [
-            if (!widget.mine) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: SearchBar(
-                  hintText: 'Search lessons, books, authors',
-                  leading: const Icon(Icons.search_rounded),
-                  elevation: const WidgetStatePropertyAll(0),
-                  onChanged: _onSearch,
+          child: Column(
+            children: [
+              if (!widget.mine) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  child: SearchBar(
+                    hintText: 'Search lessons, books, authors',
+                    leading: const Icon(Icons.search_rounded),
+                    elevation: const WidgetStatePropertyAll(0),
+                    onChanged: _onSearch,
+                  ),
                 ),
-              ),
-              SizedBox(
-                height: 48,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: const Text('All'),
-                        selected: _topic == null,
-                        onSelected: (_) {
-                          setState(() => _topic = null);
-                          _load();
-                        },
-                      ),
-                    ),
-                    for (final t in topics)
+                SizedBox(
+                  height: 48,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: [
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
-                          avatar: Icon(t.icon, size: 18),
-                          label: Text(t.name),
-                          selected: _topic == t.id,
+                          label: const Text('All'),
+                          selected: _topic == null,
                           onSelected: (_) {
-                            setState(() => _topic = _topic == t.id ? null : t.id);
+                            setState(() => _topic = null);
                             _load();
                           },
                         ),
                       ),
-                  ],
+                      for (final t in topics)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            avatar: Icon(t.icon, size: 18, color: _topic == t.id ? Colors.white : t.color),
+                            label: Text(t.name),
+                            selectedColor: t.color,
+                            showCheckmark: false,
+                            labelStyle: TextStyle(
+                              color: _topic == t.id ? Colors.white : null,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            selected: _topic == t.id,
+                            onSelected: (_) {
+                              setState(() => _topic = _topic == t.id ? null : t.id);
+                              _load();
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
+              Expanded(child: _results()),
             ],
-            Expanded(child: _results()),
-          ]),
+          ),
         ),
       ),
     );
@@ -151,10 +167,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
       return widget.mine
           ? const MessageView(
               icon: Icons.edit_note_rounded,
+              mood: MascotMood.reading,
               title: 'No lessons yet',
               message: 'Write up an idea from a book, talk or experience. Only you can see it unless an editor publishes it.',
             )
-          : const MessageView(icon: Icons.search_off_rounded, title: 'No lessons match', message: 'Try another search or topic.');
+          : const MessageView(
+              icon: Icons.search_off_rounded,
+              mood: MascotMood.thinking,
+              title: 'No lessons match',
+              message: 'Try another search or topic.',
+            );
     }
     return RefreshIndicator(
       onRefresh: _load,
@@ -164,9 +186,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (_, i) {
           if (i == _lessons.length) {
-            return Center(child: TextButton(onPressed: () => _load(more: true), child: const Text('Load more')));
+            return Center(
+              child: TextButton(onPressed: () => _load(more: true), child: const Text('Load more')),
+            );
           }
-          return LessonTile(lesson: _lessons[i], onReturn: _load);
+          return FadeSlideIn(
+            key: ValueKey(_lessons[i].id),
+            delay: Duration(milliseconds: 45 * (i % 10)),
+            child: LessonTile(lesson: _lessons[i], onReturn: _load),
+          );
         },
       ),
     );

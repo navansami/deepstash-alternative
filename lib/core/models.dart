@@ -55,19 +55,19 @@ class User {
   }
 
   User copyWith({Set<String>? likedCardIds}) => User(
-        id: id,
-        email: email,
-        name: name,
-        role: role,
-        topics: topics,
-        likedCardIds: likedCardIds ?? this.likedCardIds,
-        completedLessonIds: completedLessonIds,
-        progressDate: progressDate,
-        readIds: readIds,
-        streak: streak,
-        lastGoalDate: lastGoalDate,
-        dailyGoal: dailyGoal,
-      );
+    id: id,
+    email: email,
+    name: name,
+    role: role,
+    topics: topics,
+    likedCardIds: likedCardIds ?? this.likedCardIds,
+    completedLessonIds: completedLessonIds,
+    progressDate: progressDate,
+    readIds: readIds,
+    streak: streak,
+    lastGoalDate: lastGoalDate,
+    dailyGoal: dailyGoal,
+  );
 
   bool get canPublish => role == Role.editor || role == Role.admin;
   bool get isAdmin => role == Role.admin;
@@ -85,7 +85,11 @@ enum CardType { idea, quote, tip }
 CardType cardTypeFrom(String? s) => CardType.values.firstWhere((t) => t.name == s, orElse: () => CardType.idea);
 
 extension CardTypeLabel on CardType {
-  String get label => switch (this) { CardType.idea => 'Idea', CardType.quote => 'Quote', CardType.tip => 'Tip' };
+  String get label => switch (this) {
+    CardType.idea => 'Idea',
+    CardType.quote => 'Quote',
+    CardType.tip => 'Tip',
+  };
 }
 
 class LessonCard {
@@ -96,11 +100,11 @@ class LessonCard {
   const LessonCard({this.id, required this.type, required this.title, required this.body});
 
   factory LessonCard.fromJson(Json j) => LessonCard(
-        id: j['id'] as String?,
-        type: cardTypeFrom(j['type'] as String?),
-        title: j['title'] as String,
-        body: j['body'] as String,
-      );
+    id: j['id'] as String?,
+    type: cardTypeFrom(j['type'] as String?),
+    title: j['title'] as String,
+    body: j['body'] as String,
+  );
 
   Json toJson() => {if (id != null) 'id': id, 'type': type.name, 'title': title, 'body': body};
 }
@@ -128,14 +132,14 @@ class FeedCard {
   String get id => card.id!;
 
   factory FeedCard.fromJson(Json j) => FeedCard(
-        card: LessonCard.fromJson(j),
-        lessonId: j['lessonId'] as String,
-        lessonTitle: j['lessonTitle'] as String,
-        topic: j['topic'] as String,
-        source: j['source'] as String? ?? '',
-        author: j['author'] as String? ?? '',
-        readMinutes: j['readMinutes'] as int? ?? 1,
-      );
+    card: LessonCard.fromJson(j),
+    lessonId: j['lessonId'] as String,
+    lessonTitle: j['lessonTitle'] as String,
+    topic: j['topic'] as String,
+    source: j['source'] as String? ?? '',
+    author: j['author'] as String? ?? '',
+    readMinutes: j['readMinutes'] as int? ?? 1,
+  );
 }
 
 class LessonSummary {
@@ -168,19 +172,19 @@ class LessonSummary {
   });
 
   factory LessonSummary.fromJson(Json j) => LessonSummary(
-        id: j['id'] as String,
-        slug: j['slug'] as String,
-        title: j['title'] as String,
-        summary: j['summary'] as String? ?? '',
-        topic: j['topic'] as String,
-        source: j['source'] as String? ?? '',
-        author: j['author'] as String? ?? '',
-        readMinutes: j['readMinutes'] as int? ?? 1,
-        cardCount: j['cardCount'] as int? ?? (j['cards'] as List?)?.length ?? 0,
-        isPublic: j['visibility'] == 'public',
-        completed: j['completed'] as bool? ?? false,
-        canEdit: j['canEdit'] as bool? ?? false,
-      );
+    id: j['id'] as String,
+    slug: j['slug'] as String,
+    title: j['title'] as String,
+    summary: j['summary'] as String? ?? '',
+    topic: j['topic'] as String,
+    source: j['source'] as String? ?? '',
+    author: j['author'] as String? ?? '',
+    readMinutes: j['readMinutes'] as int? ?? 1,
+    cardCount: j['cardCount'] as int? ?? (j['cards'] as List?)?.length ?? 0,
+    isPublic: j['visibility'] == 'public',
+    completed: j['completed'] as bool? ?? false,
+    canEdit: j['canEdit'] as bool? ?? false,
+  );
 }
 
 class Lesson extends LessonSummary {
@@ -189,23 +193,23 @@ class Lesson extends LessonSummary {
   final List<LessonCard> cards;
 
   Lesson.fromJson(Json j)
-      : body = j['body'] as String,
-        takeaways = _strings(j['takeaways']),
-        cards = (j['cards'] as List).map((c) => LessonCard.fromJson(c as Json)).toList(),
-        super(
-          id: j['id'] as String,
-          slug: j['slug'] as String,
-          title: j['title'] as String,
-          summary: j['summary'] as String? ?? '',
-          topic: j['topic'] as String,
-          source: j['source'] as String? ?? '',
-          author: j['author'] as String? ?? '',
-          readMinutes: j['readMinutes'] as int? ?? 1,
-          cardCount: (j['cards'] as List).length,
-          isPublic: j['visibility'] == 'public',
-          completed: j['completed'] as bool? ?? false,
-          canEdit: j['canEdit'] as bool? ?? false,
-        );
+    : body = j['body'] as String,
+      takeaways = _strings(j['takeaways']),
+      cards = (j['cards'] as List).map((c) => LessonCard.fromJson(c as Json)).toList(),
+      super(
+        id: j['id'] as String,
+        slug: j['slug'] as String,
+        title: j['title'] as String,
+        summary: j['summary'] as String? ?? '',
+        topic: j['topic'] as String,
+        source: j['source'] as String? ?? '',
+        author: j['author'] as String? ?? '',
+        readMinutes: j['readMinutes'] as int? ?? 1,
+        cardCount: (j['cards'] as List).length,
+        isPublic: j['visibility'] == 'public',
+        completed: j['completed'] as bool? ?? false,
+        canEdit: j['canEdit'] as bool? ?? false,
+      );
 }
 
 enum StashKind { lesson, card }
@@ -225,16 +229,13 @@ class Stash {
   const Stash({required this.id, required this.name, required this.icon, required this.items});
 
   factory Stash.fromJson(Json j) => Stash(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        icon: j['icon'] as String? ?? 'bookmark',
-        items: (j['items'] as List? ?? const [])
-            .map((i) => StashRef(
-                  (i as Json)['kind'] == 'card' ? StashKind.card : StashKind.lesson,
-                  i['refId'] as String,
-                ))
-            .toList(),
-      );
+    id: j['id'] as String,
+    name: j['name'] as String,
+    icon: j['icon'] as String? ?? 'bookmark',
+    items: (j['items'] as List? ?? const [])
+        .map((i) => StashRef((i as Json)['kind'] == 'card' ? StashKind.card : StashKind.lesson, i['refId'] as String))
+        .toList(),
+  );
 
   bool contains(StashKind kind, String refId) => items.any((i) => i.kind == kind && i.refId == refId);
 }
@@ -272,13 +273,13 @@ class AdminUser {
   });
 
   factory AdminUser.fromJson(Json j) => AdminUser(
-        id: j['id'] as String,
-        email: j['email'] as String,
-        name: j['name'] as String,
-        role: roleFrom(j['role'] as String?),
-        disabled: j['disabled'] as bool? ?? false,
-        locked: j['locked'] as bool? ?? false,
-        createdAt: _date(j['createdAt']),
-        lastLoginAt: _date(j['lastLoginAt']),
-      );
+    id: j['id'] as String,
+    email: j['email'] as String,
+    name: j['name'] as String,
+    role: roleFrom(j['role'] as String?),
+    disabled: j['disabled'] as bool? ?? false,
+    locked: j['locked'] as bool? ?? false,
+    createdAt: _date(j['createdAt']),
+    lastLoginAt: _date(j['lastLoginAt']),
+  );
 }

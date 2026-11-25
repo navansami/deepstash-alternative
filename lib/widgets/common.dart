@@ -1,11 +1,22 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../core/catalog.dart';
+import 'fx.dart';
+import 'mascot.dart';
 
 class LoadingView extends StatelessWidget {
   const LoadingView({super.key});
   @override
-  Widget build(BuildContext context) => const Center(child: CircularProgressIndicator());
+  Widget build(BuildContext context) => const Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Mascot(size: 88, mood: MascotMood.thinking),
+        SizedBox(height: 8),
+        BouncingDots(),
+      ],
+    ),
+  );
 }
 
 class MessageView extends StatelessWidget {
@@ -14,6 +25,7 @@ class MessageView extends StatelessWidget {
   final String? message;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final MascotMood mood;
 
   const MessageView({
     super.key,
@@ -22,41 +34,71 @@ class MessageView extends StatelessWidget {
     this.message,
     this.actionLabel,
     this.onAction,
+    this.mood = MascotMood.happy,
   });
 
   factory MessageView.error(Object error, {VoidCallback? onRetry}) => MessageView(
-        icon: Icons.cloud_off_rounded,
-        title: 'Something went wrong',
-        message: error.toString(),
-        actionLabel: onRetry == null ? null : 'Try again',
-        onAction: onRetry,
-      );
+    icon: Icons.cloud_off_rounded,
+    mood: MascotMood.sad,
+    title: 'Something went wrong',
+    message: error.toString(),
+    actionLabel: onRetry == null ? null : 'Try again',
+    onAction: onRetry,
+  );
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
-            child: Icon(icon, size: 36, color: scheme.onPrimaryContainer),
+        child: FadeSlideIn(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 150,
+                height: 140,
+                child: Stack(
+                  children: [
+                    Center(child: Mascot(size: 130, mood: mood)),
+                    Positioned(
+                      right: 4,
+                      bottom: 10,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: scheme.primaryContainer,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 3),
+                        ),
+                        child: Icon(icon, size: 20, color: scheme.onPrimaryContainer),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              if (message != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  message!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 15),
+                ),
+              ],
+              if (actionLabel != null) ...[
+                const SizedBox(height: 20),
+                FilledButton.tonal(onPressed: onAction, child: Text(actionLabel!)),
+              ],
+            ],
           ),
-          const SizedBox(height: 16),
-          Text(title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-          if (message != null) ...[
-            const SizedBox(height: 8),
-            Text(message!, textAlign: TextAlign.center, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 15)),
-          ],
-          if (actionLabel != null) ...[
-            const SizedBox(height: 20),
-            FilledButton.tonal(onPressed: onAction, child: Text(actionLabel!)),
-          ],
-        ]),
+        ),
       ),
     );
   }
@@ -84,7 +126,9 @@ Future<bool> confirm(
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
         FilledButton(
-          style: destructive ? FilledButton.styleFrom(backgroundColor: scheme.error, foregroundColor: scheme.onError) : null,
+          style: destructive
+              ? FilledButton.styleFrom(backgroundColor: scheme.error, foregroundColor: scheme.onError)
+              : null,
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(confirmLabel),
         ),
@@ -102,12 +146,18 @@ class TopicLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = topicById(topicId);
-    final c = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(t.icon, size: 15, color: c),
-      const SizedBox(width: 4),
-      Text(t.name, style: TextStyle(color: c, fontWeight: FontWeight.w600, fontSize: 12.5)),
-    ]);
+    final c = color ?? t.color;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(t.icon, size: 15, color: c),
+        const SizedBox(width: 4),
+        Text(
+          t.name,
+          style: TextStyle(color: c, fontWeight: FontWeight.w600, fontSize: 12.5),
+        ),
+      ],
+    );
   }
 }
 
