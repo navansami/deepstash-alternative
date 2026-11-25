@@ -1,31 +1,36 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
 
-import '../app_state.dart';
-import '../models.dart';
-import '../seed_data.dart';
+import '../core/catalog.dart';
+import '../core/models.dart';
+import '../screens/lesson_screen.dart';
+import '../state/session.dart';
+import '../state/stashes.dart';
+import 'common.dart';
 import 'save_sheet.dart';
 
-/// A visual idea card with like / save / copy actions.
+/// A key-idea card with like / save / copy and a link to its full lesson.
 class IdeaCardView extends StatelessWidget {
-  final IdeaCard card;
+  final FeedCard item;
 
-  /// Feed mode: larger type, fills the available height.
+  /// Feed mode: larger type and fills the available height.
   final bool large;
-  final VoidCallback? onDelete;
+  final bool read;
+  final bool showLessonLink;
 
-  const IdeaCardView({super.key, required this.card, this.large = false, this.onDelete});
+  const IdeaCardView(
+      {super.key, required this.item, this.large = false, this.read = false, this.showLessonLink = true});
 
   @override
   Widget build(BuildContext context) {
-    final state = AppScope.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final typeColor = card.type.color(theme.brightness);
-    final topic = topicById(card.topic);
+    final card = item.card;
+    final typeColor = cardTypeColor(card.type, theme.brightness);
     final isQuote = card.type == CardType.quote;
-    final liked = state.liked.contains(card.id);
-    final saved = state.isSaved(card.id);
+    final liked = context.select<Session, bool>((s) => s.user?.likedCardIds.contains(item.id) ?? false);
+    final saved = context.select<Stashes, bool>((s) => s.isSaved(StashKind.card, item.id));
 
     final body = Text(
       isQuote ? '“${card.body}”' : card.body,
@@ -35,88 +40,89 @@ class IdeaCardView extends StatelessWidget {
               fontFamilyFallback: const ['serif'],
               fontStyle: FontStyle.italic,
               fontSize: large ? 24 : 19,
-              height: 1.45,
-            )
+              height: 1.45)
           : TextStyle(fontSize: large ? 19 : 16, height: 1.55),
     );
 
+    final attribution = [item.source, item.author].where((s) => s.isNotEmpty).join(' · ');
+
     return Card(
       elevation: 0,
+      margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       color: scheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       child: Container(
         decoration: BoxDecoration(border: Border(top: BorderSide(color: typeColor, width: 6))),
-        padding: EdgeInsets.fromLTRB(22, large ? 28 : 20, 22, 6),
+        padding: EdgeInsets.fromLTRB(22, large ? 26 : 18, 12, 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: large ? MainAxisSize.max : MainAxisSize.min,
           children: [
-            Row(children: [
-              Text(card.type.label.toUpperCase(),
-                  style: TextStyle(color: typeColor, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.1)),
-              const SizedBox(width: 8),
-              Text('${topic.emoji} ${topic.name}',
-                  style: TextStyle(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600, fontSize: 12)),
-              if (card.isUser) ...[
-                const SizedBox(width: 8),
-                Text('· YOURS',
-                    style: TextStyle(color: scheme.primary, fontWeight: FontWeight.w800, fontSize: 12)),
-              ],
-              const Spacer(),
-              if (state.readToday.contains(card.id) && large)
-                Icon(Icons.check_circle, size: 18, color: CardType.tip.color(theme.brightness)),
-            ]),
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Row(children: [
+                Icon(cardTypeIcon(card.type), size: 16, color: typeColor),
+                const SizedBox(width: 6),
+                Text(card.type.label.toUpperCase(),
+                    style: TextStyle(color: typeColor, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.1)),
+                const SizedBox(width: 12),
+                Flexible(child: TopicLabel(item.topic)),
+                const Spacer(),
+                if (read) Tooltip(message: 'Read today', child: Icon(Icons.done_all_rounded, size: 18, color: typeColor)),
+              ]),
+            ),
             SizedBox(height: large ? 18 : 12),
-            Text(card.title,
-                style: TextStyle(
-                    fontSize: large ? 28 : 21, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.4)),
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Text(card.title,
+                  style: TextStyle(fontSize: large ? 28 : 20, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.4)),
+            ),
             SizedBox(height: large ? 16 : 10),
-            if (large) Expanded(child: SingleChildScrollView(child: body)) else body,
-            if (card.source.isNotEmpty || card.author.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Text.rich(
-                TextSpan(children: [
-                  if (card.source.isNotEmpty)
-                    TextSpan(text: card.source, style: TextStyle(color: scheme.onSurface, fontWeight: FontWeight.w600)),
-                  if (card.source.isNotEmpty && card.author.isNotEmpty) const TextSpan(text: ' · '),
-                  if (card.author.isNotEmpty) TextSpan(text: card.author),
-                ]),
-                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
-              ),
+            if (large)
+              Expanded(child: SingleChildScrollView(padding: const EdgeInsets.only(right: 10), child: body))
+            else
+              Padding(padding: const EdgeInsets.only(right: 10), child: body),
+            if (attribution.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(attribution, style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
             ],
             const SizedBox(height: 8),
             const Divider(height: 1),
             Row(children: [
               IconButton(
                 tooltip: liked ? 'Unlike' : 'Like',
-                onPressed: () => state.toggleLike(card.id),
-                icon: Icon(liked ? Icons.favorite : Icons.favorite_border,
-                    color: liked ? Colors.redAccent : scheme.onSurfaceVariant),
+                onPressed: () => context.read<Session>().toggleLike(item.id),
+                icon: Icon(liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    color: liked ? const Color(0xFFE5484D) : scheme.onSurfaceVariant),
               ),
               IconButton(
                 tooltip: 'Save to stash',
-                onPressed: () => showSaveSheet(context, card),
-                icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border,
+                onPressed: () => showSaveSheet(context, StashKind.card, item.id),
+                icon: Icon(saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
                     color: saved ? scheme.primary : scheme.onSurfaceVariant),
               ),
               IconButton(
-                tooltip: 'Copy text',
+                tooltip: 'Copy',
                 onPressed: () {
-                  final attribution = [card.source, card.author].where((s) => s.isNotEmpty).join(' — ');
                   Clipboard.setData(ClipboardData(
                       text: '${card.title}\n\n${card.body}${attribution.isEmpty ? '' : '\n\n— $attribution'}'));
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
+                  showSnack(context, 'Copied to clipboard');
                 },
-                icon: Icon(Icons.copy_rounded, color: scheme.onSurfaceVariant),
+                icon: Icon(Icons.content_copy_rounded, size: 20, color: scheme.onSurfaceVariant),
               ),
               const Spacer(),
-              if (onDelete != null)
-                IconButton(
-                  tooltip: 'Delete',
-                  onPressed: onDelete,
-                  icon: Icon(Icons.delete_outline, color: scheme.onSurfaceVariant),
+              if (showLessonLink)
+                Flexible(
+                  flex: 100, // take the free space, but shrink and truncate on narrow screens
+                  child: Tooltip(
+                    message: 'Read the full lesson: ${item.lessonTitle}',
+                    child: TextButton.icon(
+                      onPressed: () => openLesson(context, item.lessonId),
+                      icon: const Icon(Icons.menu_book_outlined, size: 18),
+                      label: Text('Full lesson · ${item.readMinutes} min', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                  ),
                 ),
             ]),
           ],

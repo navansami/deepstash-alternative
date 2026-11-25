@@ -1,0 +1,7 @@
+// Local API server: npm run dev  →  http://localhost:3000/api
+import { serve } from '@hono/node-server';
+
+import { app } from './app.js';
+
+const port = Number(process.env.PORT ?? 3000);
+serve({ fetch: app.fetch, port }, () => console.log(`API listening on http://localhost:${port}/api`));

@@ -1,8 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "echo 'Flutter is installed in the build step'",
+  "installCommand": "npm ci",
   "buildCommand": "bash vercel-build.sh",
   "outputDirectory": "build/web",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "functions": {
+    "api/index.ts": { "maxDuration": 15 }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/((?!api(?:/|$)).*)", "destination": "/index.html" }
+  ]
 }

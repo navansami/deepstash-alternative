@@ -66,3 +66,6 @@ secrets.*
 # Flutter SDK cloned during Vercel builds
 /flutter/
 .vercel
+
+# Node
+node_modules/

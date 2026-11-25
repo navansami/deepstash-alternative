@@ -1,0 +1,116 @@
+import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
+
+import '../core/catalog.dart';
+import '../state/session.dart';
+import '../widgets/common.dart';
+
+/// Topic selection, used for onboarding and for editing interests later.
+class TopicPicker extends StatefulWidget {
+  final bool onboarding;
+  const TopicPicker({super.key, this.onboarding = false});
+
+  @override
+  State<TopicPicker> createState() => _TopicPickerState();
+}
+
+class _TopicPickerState extends State<TopicPicker> with BusyState {
+  static const _min = 3;
+  late final Set<String> _selected = {...context.read<Session>().me.topics};
+
+  Future<void> _save() => run(() async {
+        await context.read<Session>().updateProfile(topics: _selected.toList());
+        if (mounted && !widget.onboarding) Navigator.of(context).pop();
+      });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final remaining = _min - _selected.length;
+    final name = context.select<Session, String>((s) => s.user?.name.split(' ').first ?? '');
+
+    return Scaffold(
+      appBar: widget.onboarding ? null : AppBar(title: const Text('Your topics')),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Text(widget.onboarding ? 'Hi $name. What do you want to learn?' : 'Choose what your feed covers',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 8),
+                Text('Pick at least $_min topics. Your daily feed of key ideas is built from these.',
+                    style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 15)),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: GridView.count(
+                    crossAxisCount: MediaQuery.sizeOf(context).width > 600 ? 4 : 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.45,
+                    children: [
+                      for (final t in topics)
+                        _TopicTile(
+                          topic: t,
+                          selected: _selected.contains(t.id),
+                          onTap: () => setState(() {
+                            if (!_selected.remove(t.id)) _selected.add(t.id);
+                          }),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54)),
+                  onPressed: remaining > 0 || busy ? null : _save,
+                  child: busy
+                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
+                      : Text(remaining > 0 ? 'Pick $remaining more' : (widget.onboarding ? 'Start reading' : 'Save'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TopicTile extends StatelessWidget {
+  final Topic topic;
+  final bool selected;
+  final VoidCallback onTap;
+  const _TopicTile({required this.topic, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: selected ? scheme.primaryContainer : scheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: selected ? scheme.primary : scheme.outlineVariant, width: 2),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(topic.icon, size: 28, color: selected ? scheme.onPrimaryContainer : scheme.primary),
+              const Spacer(),
+              if (selected) Icon(Icons.check_circle_rounded, color: scheme.primary),
+            ]),
+            const Spacer(),
+            Text(topic.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
