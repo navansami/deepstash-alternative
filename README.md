@@ -31,3 +31,6 @@ lib/
   screens/             onboarding, feed, explore, create, stashes
   widgets/             idea card, save-to-stash sheet
 ```
+
+## Deploy (Vercel)
+Vercel doesn't build Flutter natively. `vercel.json` runs `vercel-build.sh`, which clones the pinned Flutter SDK, runs `flutter build web`, and serves `build/web`. Push to `main` to redeploy. The first build takes a few minutes while the SDK downloads.

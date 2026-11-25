@@ -62,3 +62,7 @@ app.*.map.json
 **/ios/Runner/GoogleService-Info.plist
 **/ios/**/*.mobileprovision
 secrets.*
+
+# Flutter SDK cloned during Vercel builds
+/flutter/
+.vercel
